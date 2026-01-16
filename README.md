@@ -19,29 +19,6 @@ Kafka → Spark Structured Streaming → Feature Engineering → Isolation Fores
 
 ---
 
-## System Architecture Diagram
-
-```mermaid
-flowchart TD
-    TE[Transaction Events]
-    KP[Kafka Producer]
-    KT[(Kafka Topic)]
-    SS[Spark Structured Streaming]
-    FE[Feature Engineering]
-    IF[Isolation Forest]
-    XGB[XGBoost Classifier]
-    OS[Output Sink]
-
-    TE --> KP
-    KP --> KT
-    KT --> SS
-    SS --> FE
-    FE --> IF
-    IF --> XGB
-    XGB --> OS
-
-
-
 ---
 
 ## Tech Stack
@@ -81,4 +58,26 @@ This hybrid strategy mirrors real-world fraud detection systems where labeled fr
 ### Installation
 ```bash
 pip install -r requirements.txt
+```
 
+---
+## System Architecture Diagram
+
+```mermaid
+flowchart TD
+    TE[Transaction Events]
+    KP[Kafka Producer]
+    KT[(Kafka Topic)]
+    SS[Spark Structured Streaming]
+    FE[Feature Engineering]
+    IF[Isolation Forest]
+    XGB[XGBoost Classifier]
+    OS[Output Sink]
+
+    TE --> KP
+    KP --> KT
+    KT --> SS
+    SS --> FE
+    FE --> IF
+    IF --> XGB
+    XGB --> OS

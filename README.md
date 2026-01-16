@@ -39,3 +39,46 @@ flowchart TD
     FE --> IF
     IF --> XGB
     XGB --> OS
+
+
+
+---
+
+## Tech Stack
+- **Programming Language:** Python  
+- **Streaming & Processing:** Apache Kafka, Apache Spark (Structured Streaming)  
+- **Machine Learning:** XGBoost, Isolation Forest (Scikit-learn)  
+- **Data Processing:** Pandas, NumPy  
+
+---
+
+## Machine Learning Approach
+The fraud detection logic combines both **unsupervised** and **supervised** learning techniques:
+
+- **Isolation Forest** is used to identify anomalous transaction behavior in streaming data without requiring labels.
+- **XGBoost** is trained on labeled transaction data to perform supervised fraud classification.
+- An ensemble approach combines anomaly scores and classification outputs to improve recall while reducing false positives.
+
+This hybrid strategy mirrors real-world fraud detection systems where labeled fraud data is limited and continuously evolving.
+
+---
+
+## Results (Offline Evaluation)
+- Achieved **ROC-AUC ≈ 0.93** on validation data  
+- Reduced false positives by **~25%** compared to a baseline supervised-only model  
+
+> Note: Metrics are based on offline evaluation using simulated transaction data and are intended to demonstrate model effectiveness rather than production benchmarks.
+
+---
+
+## How to Run
+
+### Prerequisites
+- Python 3.8+
+- Apache Kafka
+- Apache Spark
+
+### Installation
+```bash
+pip install -r requirements.txt
+

@@ -56,6 +56,22 @@ This hybrid strategy mirrors real-world fraud detection systems where labeled fr
 
 > Note: Metrics are based on offline evaluation using simulated transaction data and are intended to demonstrate model effectiveness rather than production benchmarks.
 
+## System Architecture
+
+```mermaid
+flowchart LR
+    A[Transaction Events] --> B[Kafka Producer]
+    B --> C[(Kafka Topic)]
+
+    C --> D[Spark Structured Streaming]
+
+    D --> E[Feature Engineering]
+
+    E --> F[Isolation Forest<br/>(Anomaly Detection)]
+    F --> G[XGBoost<br/>(Fraud Classification)]
+
+    G --> H[Output Sink<br/>(Alerts / Storage)]
+
 ---
 
 ## How to Run
@@ -74,20 +90,3 @@ python src/producer/kafka_producer.py
 
 Run Spark Streaming Job
 python src/streaming/streaming_job.py
-
-
-## System Architecture
-
-```mermaid
-flowchart LR
-    A[Transaction Events] --> B[Kafka Producer]
-    B --> C[(Kafka Topic)]
-
-    C --> D[Spark Structured Streaming]
-
-    D --> E[Feature Engineering]
-
-    E --> F[Isolation Forest<br/>(Anomaly Detection)]
-    F --> G[XGBoost<br/>(Fraud Classification)]
-
-    G --> H[Output Sink<br/>(Alerts / Storage)]

@@ -33,23 +33,3 @@ flowchart LR
     F --> G[XGBoost (Fraud Classification)]
 
     G --> H[Output Sink (Alerts / Storage)]
-
-
----
-
-## How to Run
-
-### Prerequisites
-- Python 3.8+
-- Apache Kafka
-- Apache Spark
-
-### Installation
-```bash
-pip install -r requirements.txt
-
-Run Kafka Producer
-python src/producer/kafka_producer.py
-
-Run Spark Streaming Job
-python src/streaming/streaming_job.py

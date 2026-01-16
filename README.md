@@ -22,14 +22,20 @@ Kafka → Spark Structured Streaming → Feature Engineering → Isolation Fores
 ## System Architecture Diagram
 
 ```mermaid
-flowchart LR
-    A[Transaction Events] --> B[Kafka Producer]
-    B --> C[(Kafka Topic)]
+flowchart TD
+    TE[Transaction Events]
+    KP[Kafka Producer]
+    KT[(Kafka Topic)]
+    SS[Spark Structured Streaming]
+    FE[Feature Engineering]
+    IF[Isolation Forest]
+    XGB[XGBoost Classifier]
+    OS[Output Sink]
 
-    C --> D[Spark Structured Streaming]
-    D --> E[Feature Engineering]
-
-    E --> F[Isolation Forest (Anomaly Detection)]
-    F --> G[XGBoost (Fraud Classification)]
-
-    G --> H[Output Sink (Alerts / Storage)]
+    TE --> KP
+    KP --> KT
+    KT --> SS
+    SS --> FE
+    FE --> IF
+    IF --> XGB
+    XGB --> OS

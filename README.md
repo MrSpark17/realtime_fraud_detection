@@ -12,6 +12,7 @@ The system is designed to reflect architectures used in banking and payment plat
 
 ```
 Kafka → Spark Structured Streaming → Feature Engineering → Isolation Forest + XGBoost → Alerts
+
 ```
 
 - **Apache Kafka**: Real-time transaction event ingestion
@@ -32,43 +33,48 @@ realtime_fraud_detection/
 ├── config/
 │   └── app_config.yaml              # Configuration (Kafka, models, thresholds)
 ├── data/
-│   └── historical_transactions.csv  # Training data
+│   └── historical_transactions.csv  # Synthetic training data
 ├── models/
-│   └── fraud_xgboost.json          # Trained XGBoost model
+│   └── fraud_xgboost.json           # Trained XGBoost model
 ├── logs/
 ├── src/
 │   ├── common/
-│   │   └── config.py               # Config loader
+│   │   └── config.py                # Config loader
 │   ├── producer/
-│   │   └── kafka_producer.py       # Simulates real-time transactions
+│   │   └── kafka_producer.py        # Simulates real-time transactions into Kafka
 │   ├── streaming/
-│   │   └── streaming_job.py        # Spark Structured Streaming pipeline
+│   │   └── streaming_job.py         # Spark Structured Streaming pipeline
 │   └── training/
-│       └── train_xgboost.py        # Offline model training
+│       └── train_xgboost.py         # Legacy/simple offline training script
+├── scripts/
+│   ├── generate_sample_data.py      # Generates labeled transaction dataset
+│   ├── train_model.py               # Full training pipeline (metrics + save model)
+│   └── quick_demo.py                # Offline hybrid fraud detection demo
 ├── tests/
-│   ├── test_config.py
-│   └── test_producer.py
+│   ├── test_config.py               # Tests for configuration loader
+│   └── test_producer.py             # Tests for Kafka producer utilities
 ├── docker-compose.yml               # Kafka + Spark services
-├── Dockerfile                        # Application container
+├── Dockerfile                       # Application container
 ├── .dockerignore
 ├── requirements.txt
 └── README.md
+
 ```
 
 ---
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|-----------|
-| Language | Python 3.10+ |
-| Streaming | Apache Kafka, Spark Structured Streaming |
-| ML Models | XGBoost, Scikit-learn (Isolation Forest) |
-| Data Processing | Pandas, NumPy |
-| Configuration | PyYAML |
-| Containerization | Docker, Docker Compose |
-| Testing | pytest |
-| CI/CD | GitHub Actions |
+| Component     | Technology                               |
+| ------------- | ---------------------------------------- |
+| Language      | Python 3.10+                             |
+| Streaming     | Apache Kafka, Spark Structured Streaming |
+| ML Models     | XGBoost, Scikit-learn (Isolation Forest) |
+| Data          | Pandas, NumPy                            |
+| Config        | PyYAML                                   |
+| Container     | Docker, Docker Compose                   |
+| Testing       | pytest                                   |
+| Orchestration | GitHub Actions                           |
 
 ---
 
@@ -99,15 +105,25 @@ The system uses a **hybrid ensemble strategy**:
 ---
 
 ## How to Run
+You can run this system in two primary modes:
+
+ - End-to-end streaming mode (Kafka + Spark + producer).
+ - Offline demo mode (train model + hybrid scoring on static data).
 
 ### Prerequisites
 
 - Docker & Docker Compose (recommended)
 - Python 3.10+ (for local development)
 
-### Quick Start (Docker Compose)
+Install Python dependencies:
+pip install -r requirements.txt
 
-```bash
+Run tests:
+pytest tests/ -v --cov=src
+
+### Quick Start (Docker Compose – Kafka & Spark)
+
+```
 # Clone and navigate to project
 git clone https://github.com/MrSpark17/realtime_fraud_detection
 cd realtime_fraud_detection
@@ -122,71 +138,97 @@ docker-compose ps
 docker-compose logs kafka | grep "started"
 ```
 
-Once services are running, in separate terminals:
+Spark Structured Streaming with Kafka is a common pattern for real-time fraud detection and anomaly analytics
 
-```bash
-# Terminal 1: Start the Kafka producer (sends simulated transactions)
+### Generate Training Data
+
+Synthetic data for offline training and demos:
+python -m scripts.generate_sample_data
+
+This creates data/historical_transactions.csv with:
+
+1000 transactions.
+~5% labeled as fraud.
+
+Columns like: transaction_id, user_id, amount, merchant_id, location, timestamp, is_high_value, is_fraud.
+
+### Train the XGBoost Model
+
+Train the supervised classifier and save it for both batch and streaming use:
+python -m scripts.train_model
+
+This will:
+ - Load data/historical_transactions.csv.
+ - Perform basic feature engineering (e.g., encode location).
+ - Split into train/test.
+ - Train an XGBoost classifier.
+ - Print metrics (ROC-AUC, classification report, confusion matrix).
+ - Save model to models/fraud_xgboost.json.
+
+### Offline Hybrid Fraud Detection Demo
+
+Run a self-contained demo that shows the hybrid logic without starting Kafka/Spark:
+python -m scripts.quick_demo
+
+The demo will:
+ - Load the historical transactions and trained model.
+ - Fit an Isolation Forest on transaction amounts.
+ - Compute:
+      - Total transactions analyzed.
+      - Number of fraud-labeled rows.
+      - Number of high-risk alerts and alert rate.
+      - Top N high-risk transactions with amounts and fraud probabilities.
+
+### End-to-End Streaming Pipeline
+
+Once Docker services are running:
+Terminal 1 – Kafka Producer
 python -m src.producer.kafka_producer
 
-# Terminal 2: Start the Spark streaming job (processes & detects fraud)
+ - Continuously generates synthetic transactions.
+ - Publishes them to the Kafka transactions topic.
+
+Terminal 2 – Spark Streaming Job
 python -m src.streaming.streaming_job
 
-# Terminal 3: Monitor output
-# Watch fraud alerts in Terminal 2's logs
-```
+ - Starts a Spark Structured Streaming query reading from Kafka.
+ - Applies feature engineering.
+ - Loads the XGBoost model once.
+ - Applies Isolation Forest per micro-batch.
+ - Logs fraud alerts for transactions satisfying the hybrid rule.
 
-### Development Setup (Local Python)
+Terminal 3 – Monitoring
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run unit tests
-pytest tests/ -v --cov=src
-
-# For production model training (requires training data)
-python -m src.training.train_xgboost
-```
+ - Tail logs of the streaming job or Spark UI.
+ - Optionally, extend the job to write alerts to a sink (e.g., console, file, DB, dashboard).
 
 ### Cleanup
 
-```bash
 # Stop all containers and remove volumes
 docker-compose down -v
-```
 
----
+Key Features
+✅ Production-Style Architecture
+ - Externalized configuration via config/app_config.yaml.
+ - Structured components for producer, streaming, and training.
 
-## Key Features
+✅ Scalable Streaming Design
+ - Spark Structured Streaming for horizontal scaling and micro-batch low-latency processing.
+ - Kafka partitions can be increased for higher throughput.
 
-✅ **Production-Ready Architecture**
-- Externalized configuration (YAML)
-- Structured logging
-- Error handling & retries
-- Modular, testable code
+✅ ML Best Practices
+ - Models loaded once, not retrained per batch.
+ - Hybrid ensemble for improved robustness vs single-model baselines.
+ - Feature engineering integrated into the streaming pipeline.
 
-✅ **Scalable Design**
-- Spark Structured Streaming for horizontal scaling
-- Kafka partitions for parallel processing
-- Micro-batch processing for low latency
+✅ Developer Experience & Ops
+ - Docker + Docker Compose for local infra.
+ - pytest-based tests for configuration and transaction generator.
+ - Scripts for reproducible data generation, training, and demos.
 
-✅ **ML Best Practices**
-- Models loaded once (not refit per batch)
-- Hybrid ensemble for robust predictions
-- Feature engineering integrated into pipeline
+### Configuration
+Edit config/app_config.yaml to customize:
 
-✅ **Deployment-Ready**
-- Docker containerization
-- Docker Compose orchestration
-- GitHub Actions CI/CD
-
----
-
-## Configuration
-
-Edit `config/app_config.yaml` to customize:
-
-```yaml
 kafka:
   bootstrap_servers: "localhost:9092"
   transactions_topic: "transactions"
@@ -199,22 +241,6 @@ models:
 streaming:
   high_value_threshold: 2000.0
   batch_interval_sec: 1
-```
 
----
 
-## Next Steps for Production Deployment
-
-- [ ] Integrate with real Kafka brokers
-- [ ] Connect to real fraud labels for model retraining
-- [ ] Add monitoring & alerting (Prometheus, Grafana)
-- [ ] Implement model versioning & A/B testing (MLflow)
-- [ ] Add data validation & schema enforcement
-- [ ] Implement feature store for consistency
-- [ ] Deploy to Kubernetes for high availability
-
----
-
-## Author
-
-Aravindan G | Software Engineer | [GitHub](https://github.com/MrSpark17)
+This configuration pattern is similar to real financial streaming systems where deployment environments differ by hostnames, thresholds, and model paths.

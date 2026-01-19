@@ -116,10 +116,15 @@ You can run this system in two primary modes:
 - Python 3.10+ (for local development)
 
 Install Python dependencies:
+```
 pip install -r requirements.txt
+```
 
 Run tests:
+```
 pytest tests/ -v --cov=src
+```
+---
 
 ### Quick Start (Docker Compose – Kafka & Spark)
 
@@ -143,7 +148,9 @@ Spark Structured Streaming with Kafka is a common pattern for real-time fraud de
 ### Generate Training Data
 
 Synthetic data for offline training and demos:
+```
 python -m scripts.generate_sample_data
+```
 
 This creates data/historical_transactions.csv with:
 
@@ -155,7 +162,9 @@ Columns like: transaction_id, user_id, amount, merchant_id, location, timestamp,
 ### Train the XGBoost Model
 
 Train the supervised classifier and save it for both batch and streaming use:
+```
 python -m scripts.train_model
+```
 
 This will:
  - Load data/historical_transactions.csv.
@@ -168,7 +177,9 @@ This will:
 ### Offline Hybrid Fraud Detection Demo
 
 Run a self-contained demo that shows the hybrid logic without starting Kafka/Spark:
+```
 python -m scripts.quick_demo
+```
 
 The demo will:
  - Load the historical transactions and trained model.
@@ -183,13 +194,16 @@ The demo will:
 
 Once Docker services are running:
 Terminal 1 – Kafka Producer
+```
 python -m src.producer.kafka_producer
-
+```
  - Continuously generates synthetic transactions.
  - Publishes them to the Kafka transactions topic.
 
 Terminal 2 – Spark Streaming Job
+```
 python -m src.streaming.streaming_job
+```
 
  - Starts a Spark Structured Streaming query reading from Kafka.
  - Applies feature engineering.
@@ -202,10 +216,14 @@ Terminal 3 – Monitoring
  - Tail logs of the streaming job or Spark UI.
  - Optionally, extend the job to write alerts to a sink (e.g., console, file, DB, dashboard).
 
+---
+
 ### Cleanup
 
 # Stop all containers and remove volumes
+```
 docker-compose down -v
+```
 
 Key Features
 ✅ Production-Style Architecture
@@ -229,6 +247,7 @@ Key Features
 ### Configuration
 Edit config/app_config.yaml to customize:
 
+```
 kafka:
   bootstrap_servers: "localhost:9092"
   transactions_topic: "transactions"
@@ -241,6 +260,10 @@ models:
 streaming:
   high_value_threshold: 2000.0
   batch_interval_sec: 1
-
-
+```
 This configuration pattern is similar to real financial streaming systems where deployment environments differ by hostnames, thresholds, and model paths.
+
+Author
+Aravindan G · Software Engineer
+GitHub: https://github.com/MrSpark17
+Portfolio: https://aravindan-g.netlify.app/

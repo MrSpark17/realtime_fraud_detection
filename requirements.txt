@@ -7,3 +7,4 @@ pyyaml
 joblib
 pytest
 pytest-cov
+numpy

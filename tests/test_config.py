@@ -1,4 +1,3 @@
-import os
 import pytest
 from src.common.config import get_config
 
@@ -23,3 +22,11 @@ def test_models_config():
     model_cfg = cfg["models"]
     assert "xgboost_path" in model_cfg
     assert float(model_cfg["isolation_contamination"]) > 0
+    assert int(model_cfg["random_state"]) >= 0
+
+def test_streaming_config():
+    """Test streaming config values."""
+    cfg = get_config()
+    stream_cfg = cfg["streaming"]
+    assert float(stream_cfg["high_value_threshold"]) > 0
+    assert int(stream_cfg["batch_interval_sec"]) > 0

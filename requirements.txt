@@ -3,3 +3,7 @@ pyspark
 xgboost
 scikit-learn
 pandas
+pyyaml
+joblib
+pytest
+pytest-cov

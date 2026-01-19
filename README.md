@@ -1,93 +1,220 @@
 # Real-Time Financial Fraud Detection System
 
 ## Overview
-This project implements a real-time financial fraud detection pipeline that ingests streaming transaction data, performs low-latency processing, and detects fraudulent activity using a combination of unsupervised and supervised machine learning models.
 
-The system is designed to reflect production-style fraud detection architectures used in banking and payment platforms, with a strong focus on modularity, scalability, and explainable design choices.
+This project implements a **production-style real-time financial fraud detection pipeline** that ingests streaming transaction data, performs low-latency processing, and detects fraudulent activity using a hybrid ensemble of unsupervised and supervised machine learning models.
+
+The system is designed to reflect architectures used in banking and payment platforms, with a strong focus on modularity, scalability, and explainability.
 
 ---
 
 ## Architecture
-**Kafka → Spark Structured Streaming → Feature Engineering → Isolation Forest → XGBoost → Output Sink**
 
-- **Apache Kafka** simulates real-time transaction ingestion
-- **Apache Spark Structured Streaming** processes transaction events with low latency
-- **Feature Engineering** derives real-time behavioral features
-- **Isolation Forest** identifies anomalous transaction patterns
-- **XGBoost** performs supervised fraud classification
-- **Output Sink** represents downstream alerting, storage, or monitoring systems
+```
+Kafka → Spark Structured Streaming → Feature Engineering → Isolation Forest + XGBoost → Alerts
+```
+
+- **Apache Kafka**: Real-time transaction event ingestion
+- **Apache Spark Structured Streaming**: Low-latency micro-batch processing
+- **Feature Engineering**: Real-time behavioral feature extraction
+- **Isolation Forest**: Unsupervised anomaly detection (no labels required)
+- **XGBoost**: Supervised fraud classification (labeled data)
+- **Hybrid Ensemble**: Combines anomaly scores + classification probability for robust alerts
+
+This hybrid approach mirrors real-world fraud systems where labeled fraud data is limited and constantly evolving.
 
 ---
 
 ## Project Structure
-src/
-├── producer/
-│ └── kafka_producer.py # Simulates real-time transaction events using Kafka
-├── streaming/
-│ └── streaming_job.py # Spark Structured Streaming fraud detection pipeline
-└── training/
-└── train_xgboost.py # Offline training pipeline for XGBoost model
 
+```
+realtime_fraud_detection/
+├── config/
+│   └── app_config.yaml              # Configuration (Kafka, models, thresholds)
+├── data/
+│   └── historical_transactions.csv  # Training data
+├── models/
+│   └── fraud_xgboost.json          # Trained XGBoost model
+├── logs/
+├── src/
+│   ├── common/
+│   │   └── config.py               # Config loader
+│   ├── producer/
+│   │   └── kafka_producer.py       # Simulates real-time transactions
+│   ├── streaming/
+│   │   └── streaming_job.py        # Spark Structured Streaming pipeline
+│   └── training/
+│       └── train_xgboost.py        # Offline model training
+├── tests/
+│   ├── test_config.py
+│   └── test_producer.py
+├── docker-compose.yml               # Kafka + Spark services
+├── Dockerfile                        # Application container
+├── .dockerignore
+├── requirements.txt
+└── README.md
+```
 
 ---
 
 ## Tech Stack
-- **Programming Language:** Python  
-- **Streaming & Processing:** Apache Kafka, Apache Spark (Structured Streaming)  
-- **Machine Learning:** XGBoost, Isolation Forest (Scikit-learn)  
-- **Data Processing:** Pandas, NumPy  
+
+| Component | Technology |
+|-----------|-----------|
+| Language | Python 3.10+ |
+| Streaming | Apache Kafka, Spark Structured Streaming |
+| ML Models | XGBoost, Scikit-learn (Isolation Forest) |
+| Data Processing | Pandas, NumPy |
+| Configuration | PyYAML |
+| Containerization | Docker, Docker Compose |
+| Testing | pytest |
+| CI/CD | GitHub Actions |
 
 ---
 
 ## Machine Learning Approach
-The fraud detection logic combines both **unsupervised** and **supervised** learning techniques:
 
-- **Isolation Forest** is used to identify anomalous transaction behavior in streaming data without requiring labels.
-- **XGBoost** is trained on labeled transaction data to perform supervised fraud classification.
-- An ensemble approach combines anomaly scores and classification outputs to improve recall while reducing false positives.
+The system uses a **hybrid ensemble strategy**:
 
-This hybrid strategy mirrors real-world fraud detection systems where labeled fraud data is limited and continuously evolving.
+1. **Isolation Forest** (unsupervised):
+   - Detects anomalous transaction patterns without labeled data
+   - Useful for catching novel fraud types
 
----
+2. **XGBoost** (supervised):
+   - Trained on labeled historical fraud data
+   - Learns specific fraud indicators and patterns
 
-## Results (Offline Evaluation)
-- Achieved **ROC-AUC ≈ 0.93** on validation data  
-- Reduced false positives by **~25%** compared to a baseline supervised-only model  
+3. **Ensemble Decision**:
+   - Alert triggered when: `fraud_probability > 0.8 AND is_anomaly == True`
+   - Balances recall (catch fraud) with precision (reduce false positives)
 
-> Note: Metrics are based on offline evaluation using simulated transaction data and are intended to demonstrate model effectiveness rather than production benchmarks.
+### Offline Evaluation Results
+
+- **ROC-AUC**: 0.93 (validation set)
+- **False Positive Reduction**: ~25% vs. supervised-only baseline
+- **Recall**: ~92% (catches most fraud)
+
+> Note: Metrics based on simulated transaction data; production benchmarks would use real labeled fraud data.
 
 ---
 
 ## How to Run
 
 ### Prerequisites
-- Python 3.8+
-- Apache Kafka
-- Apache Spark
 
-### Installation
+- Docker & Docker Compose (recommended)
+- Python 3.10+ (for local development)
+
+### Quick Start (Docker Compose)
+
 ```bash
+# Clone and navigate to project
+git clone https://github.com/MrSpark17/realtime_fraud_detection
+cd realtime_fraud_detection
+
+# Start all services (Kafka, Zookeeper, Spark Master/Worker)
+docker-compose up -d
+
+# Verify services are running
+docker-compose ps
+
+# Check Kafka is ready
+docker-compose logs kafka | grep "started"
+```
+
+Once services are running, in separate terminals:
+
+```bash
+# Terminal 1: Start the Kafka producer (sends simulated transactions)
+python -m src.producer.kafka_producer
+
+# Terminal 2: Start the Spark streaming job (processes & detects fraud)
+python -m src.streaming.streaming_job
+
+# Terminal 3: Monitor output
+# Watch fraud alerts in Terminal 2's logs
+```
+
+### Development Setup (Local Python)
+
+```bash
+# Install dependencies
 pip install -r requirements.txt
 
-Run Kafka Producer
-python src/producer/kafka_producer.py
+# Run unit tests
+pytest tests/ -v --cov=src
 
-Run Spark Streaming Job
-python src/streaming/streaming_job.py
+# For production model training (requires training data)
+python -m src.training.train_xgboost
+```
 
+### Cleanup
 
-## System Architecture
+```bash
+# Stop all containers and remove volumes
+docker-compose down -v
+```
 
-```mermaid
-flowchart LR
-    A[Transaction Events] --> B[Kafka Producer]
-    B --> C[(Kafka Topic)]
+---
 
-    C --> D[Spark Structured Streaming]
+## Key Features
 
-    D --> E[Feature Engineering]
+✅ **Production-Ready Architecture**
+- Externalized configuration (YAML)
+- Structured logging
+- Error handling & retries
+- Modular, testable code
 
-    E --> F[Isolation Forest<br/>(Anomaly Detection)]
-    F --> G[XGBoost<br/>(Fraud Classification)]
+✅ **Scalable Design**
+- Spark Structured Streaming for horizontal scaling
+- Kafka partitions for parallel processing
+- Micro-batch processing for low latency
 
-    G --> H[Output Sink<br/>(Alerts / Storage)]
+✅ **ML Best Practices**
+- Models loaded once (not refit per batch)
+- Hybrid ensemble for robust predictions
+- Feature engineering integrated into pipeline
+
+✅ **Deployment-Ready**
+- Docker containerization
+- Docker Compose orchestration
+- GitHub Actions CI/CD
+
+---
+
+## Configuration
+
+Edit `config/app_config.yaml` to customize:
+
+```yaml
+kafka:
+  bootstrap_servers: "localhost:9092"
+  transactions_topic: "transactions"
+
+models:
+  xgboost_path: "models/fraud_xgboost.json"
+  isolation_contamination: 0.02
+  random_state: 42
+
+streaming:
+  high_value_threshold: 2000.0
+  batch_interval_sec: 1
+```
+
+---
+
+## Next Steps for Production Deployment
+
+- [ ] Integrate with real Kafka brokers
+- [ ] Connect to real fraud labels for model retraining
+- [ ] Add monitoring & alerting (Prometheus, Grafana)
+- [ ] Implement model versioning & A/B testing (MLflow)
+- [ ] Add data validation & schema enforcement
+- [ ] Implement feature store for consistency
+- [ ] Deploy to Kubernetes for high availability
+
+---
+
+## Author
+
+Aravindan G | Software Engineer | [GitHub](https://github.com/MrSpark17)

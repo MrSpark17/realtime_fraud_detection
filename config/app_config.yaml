@@ -1,0 +1,12 @@
+kafka:
+  bootstrap_servers: "localhost:9092"
+  transactions_topic: "transactions"
+
+models:
+  xgboost_path: "models/fraud_xgboost.json"
+  isolation_contamination: 0.02
+  random_state: 42
+
+streaming:
+  high_value_threshold: 2000.0
+  batch_interval_sec: 1
